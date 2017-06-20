@@ -24,7 +24,7 @@ import (
 
 	"github.com/gonum/plot/plotter"
 	"github.com/gonum/plot/vg"
-	vgdraw "github.com/gonum/plot/vg/draw"
+	"github.com/gonum/plot/vg/draw"
 	"github.com/gonum/plot/vg/vgimg"
 
 	"go-hep.org/x/hep/csvutil"
@@ -256,7 +256,7 @@ func makePlots(tline Timeline, fname string) error {
 }
 
 func makePlot(tline Timeline, size int, fname string) (image.Image, error) {
-	tp, err := hplot.NewTiledPlot(vgdraw.Tiles{Cols: 2, Rows: 2})
+	tp, err := hplot.NewTiledPlot(draw.Tiles{Cols: 2, Rows: 2})
 	if err != nil {
 		return nil, err
 	}
@@ -312,7 +312,7 @@ func makePlot(tline Timeline, size int, fname string) (image.Image, error) {
 	}
 
 	c := vgimg.PngCanvas{Canvas: vgimg.New(20*vg.Centimeter, 20*vg.Centimeter)}
-	tp.Draw(vgdraw.New(c))
+	tp.Draw(draw.New(c))
 	if fname != "" {
 		f, err := os.Create(fname)
 		if err != nil {
@@ -370,7 +370,7 @@ func fillTiles(tp *hplot.TiledPlot, tgts []Target) error {
 			return err
 		}
 		pts.Color = color.Black
-		pts.GlyphStyle.Shape = vgdraw.CircleGlyph{}
+		pts.GlyphStyle.Shape = draw.CircleGlyph{}
 		pts.GlyphStyle.Radius = 0.5
 
 		p.Add(rpt)
@@ -429,7 +429,7 @@ func makeResPlot(tgts []Target) error {
 		h1z.Fill(tgt.Z, 1)
 	}
 
-	tp, err := hplot.NewTiledPlot(vgdraw.Tiles{
+	tp, err := hplot.NewTiledPlot(draw.Tiles{
 		Cols: 2,
 		Rows: 2,
 	})
