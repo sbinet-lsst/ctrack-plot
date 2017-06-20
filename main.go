@@ -28,6 +28,7 @@ import (
 	"github.com/gonum/plot/vg/vgimg"
 
 	"go-hep.org/x/hep/csvutil"
+	"go-hep.org/x/hep/hbook"
 	"go-hep.org/x/hep/hplot"
 )
 
@@ -128,6 +129,11 @@ func main() {
 		if err != nil {
 			log.Fatal(err)
 		}
+	}
+
+	err = makeResPlot(tline.T1)
+	if err != nil {
+		log.Fatal(err)
 	}
 }
 
@@ -404,4 +410,96 @@ func (r fpReader) Read(p []byte) (int, error) {
 		p[i] = v
 	}
 	return n, err
+}
+
+func makeResPlot(tgts []Target) error {
+	var err error
+	var (
+		xmean = tgts[0].X
+		ymean = tgts[0].Y
+		zmean = tgts[0].Z
+		delta = 2.5
+	)
+	h1x := hbook.NewH1D(100, xmean-delta, xmean+delta)
+	h1y := hbook.NewH1D(100, ymean-delta, ymean+delta)
+	h1z := hbook.NewH1D(100, zmean-delta, zmean+delta)
+	for _, tgt := range tgts[:400] {
+		h1x.Fill(tgt.X, 1)
+		h1y.Fill(tgt.Y, 1)
+		h1z.Fill(tgt.Z, 1)
+	}
+
+	tp, err := hplot.NewTiledPlot(vgdraw.Tiles{
+		Cols: 2,
+		Rows: 2,
+	})
+	if err != nil {
+		return err
+	}
+
+	for _, tbl := range []struct {
+		name string
+		pl   *hplot.Plot
+		h1   *hbook.H1D
+	}{
+		{"X (cm)", tp.Plot(0, 0), h1x},
+		{"Y (cm)", tp.Plot(0, 1), h1y},
+		{"Z (cm)", tp.Plot(1, 0), h1z},
+	} {
+		hh, err := hplot.NewH1D(tbl.h1)
+		if err != nil {
+			return err
+		}
+		hh.Infos.Style = hplot.HInfoSummary
+
+		tbl.pl.X.Label.Text = tbl.name
+		tbl.pl.Add(hh)
+		tbl.pl.Add(hplot.NewGrid())
+	}
+
+	//tp.Plots[3] = nil
+	labeldata := []string{
+		fmt.Sprintf(`
+x-mean   = %v
+x-stddev = %v
+x-minmax = [%v; %v]
+
+y-mean   = %v
+y-stddev = %v
+y-minmax = [%v; %v]
+
+z-mean   = %v
+z-stddev = %v
+z-minmax = [%v; %v]
+`,
+			h1x.XMean(), h1x.XStdDev(), h1x.XMin(), h1x.XMax(),
+			h1y.XMean(), h1y.XStdDev(), h1y.XMin(), h1y.XMax(),
+			h1z.XMean(), h1z.XStdDev(), h1z.XMin(), h1z.XMax(),
+		),
+	}
+	xys := make(plotter.XYs, len(labeldata))
+	for i := range xys {
+		xys[i].X = 0
+		xys[i].Y = float64(len(labeldata) - i)
+	}
+	labels, err := plotter.NewLabels(plotter.XYLabels{
+		XYs:    xys,
+		Labels: labeldata,
+	})
+	if err != nil {
+		log.Fatal(err)
+	}
+	tp.Plot(1, 1).HideAxes()
+	tp.Plot(1, 1).X.Min = -0.5
+	tp.Plot(1, 1).X.Max = 1
+	tp.Plot(1, 1).Y.Min = -10
+	tp.Plot(1, 1).Y.Max = +20
+	tp.Plot(1, 1).Add(labels)
+
+	err = tp.Save(20*vg.Centimeter, -1, "resolution.png")
+	if err != nil {
+		return err
+	}
+
+	return err
 }
