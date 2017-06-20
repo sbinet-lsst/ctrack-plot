@@ -16,6 +16,7 @@ import (
 	"image/gif"
 	"io"
 	"log"
+	"math"
 	"os"
 	"runtime"
 	"runtime/pprof"
@@ -131,9 +132,21 @@ func main() {
 		}
 	}
 
-	err = makeResPlot(tline.T1)
-	if err != nil {
-		log.Fatal(err)
+	for _, tbl := range []struct {
+		tgts []Target
+		name string
+	}{
+		{tline.T1, "resolution-t1.png"},
+		{tline.T2, "resolution-t2.png"},
+		{tline.T3, "resolution-t3.png"},
+		{tline.T4, "resolution-t4.png"},
+		{tline.T5, "resolution-t5.png"},
+		{tline.T6, "resolution-t6.png"},
+	} {
+		err = makeResPlot(tbl.tgts, tbl.name)
+		if err != nil {
+			log.Fatal(err)
+		}
 	}
 }
 
@@ -412,18 +425,33 @@ func (r fpReader) Read(p []byte) (int, error) {
 	return n, err
 }
 
-func makeResPlot(tgts []Target) error {
+func makeResPlot(tgts []Target, fname string) error {
 	var err error
+	ranges := func(tgts []Target, end int) (float64, float64, float64, float64, float64, float64) {
+		xmin := +math.MaxFloat64
+		xmax := -math.MaxFloat64
+		ymin := +math.MaxFloat64
+		ymax := -math.MaxFloat64
+		zmin := +math.MaxFloat64
+		zmax := -math.MaxFloat64
+		for _, tgt := range tgts[:end] {
+			xmin = math.Min(xmin, tgt.X)
+			xmax = math.Max(xmax, tgt.X)
+			ymin = math.Min(ymin, tgt.Y)
+			ymax = math.Max(ymax, tgt.Y)
+			zmin = math.Min(zmin, tgt.Z)
+			zmax = math.Max(zmax, tgt.Z)
+		}
+		return xmin, xmax, ymin, ymax, zmin, zmax
+	}
 	var (
-		xmean = tgts[0].X
-		ymean = tgts[0].Y
-		zmean = tgts[0].Z
-		delta = 2.5
+		xmin, xmax, ymin, ymax, zmin, zmax = ranges(tgts, *beg)
+		delta                              = 0.5
 	)
-	h1x := hbook.NewH1D(100, xmean-delta, xmean+delta)
-	h1y := hbook.NewH1D(100, ymean-delta, ymean+delta)
-	h1z := hbook.NewH1D(100, zmean-delta, zmean+delta)
-	for _, tgt := range tgts[:50] {
+	h1x := hbook.NewH1D(100, xmin-delta, xmax+delta)
+	h1y := hbook.NewH1D(100, ymin-delta, ymax+delta)
+	h1z := hbook.NewH1D(100, zmin-delta, zmax+delta)
+	for _, tgt := range tgts[:*beg] {
 		h1x.Fill(tgt.X, 1)
 		h1y.Fill(tgt.Y, 1)
 		h1z.Fill(tgt.Z, 1)
@@ -442,14 +470,16 @@ func makeResPlot(tgts []Target) error {
 		pl   *hplot.Plot
 		h1   *hbook.H1D
 	}{
-		{"X (cm)", tp.Plot(0, 0), h1x},
-		{"Y (cm)", tp.Plot(0, 1), h1y},
-		{"Z (cm)", tp.Plot(1, 0), h1z},
+		{"X (mm)", tp.Plot(0, 0), h1x},
+		{"Y (mm)", tp.Plot(0, 1), h1y},
+		{"Z (mm)", tp.Plot(1, 0), h1z},
 	} {
 		hh, err := hplot.NewH1D(tbl.h1)
 		if err != nil {
 			return err
 		}
+		hh.LineStyle.Color = color.NRGBA{255, 0, 0, 128}
+		hh.FillColor = color.NRGBA{255, 0, 0, 128}
 		// hh.Infos.Style = hplot.HInfoSummary
 
 		tbl.pl.X.Label.Text = tbl.name
@@ -502,8 +532,9 @@ z-minmax = [%v; %v]
 	tp.Plot(1, 1).Y.Min = -10
 	tp.Plot(1, 1).Y.Max = +20
 	tp.Plot(1, 1).Add(labels)
+	tp.Plot(1, 1).X.Label.Text = fname
 
-	err = tp.Save(20*vg.Centimeter, -1, "resolution.png")
+	err = tp.Save(20*vg.Centimeter, -1, fname)
 	if err != nil {
 		return err
 	}
