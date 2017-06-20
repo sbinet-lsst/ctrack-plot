@@ -423,7 +423,7 @@ func makeResPlot(tgts []Target) error {
 	h1x := hbook.NewH1D(100, xmean-delta, xmean+delta)
 	h1y := hbook.NewH1D(100, ymean-delta, ymean+delta)
 	h1z := hbook.NewH1D(100, zmean-delta, zmean+delta)
-	for _, tgt := range tgts[:400] {
+	for _, tgt := range tgts[:50] {
 		h1x.Fill(tgt.X, 1)
 		h1y.Fill(tgt.Y, 1)
 		h1z.Fill(tgt.Z, 1)
@@ -450,16 +450,15 @@ func makeResPlot(tgts []Target) error {
 		if err != nil {
 			return err
 		}
-		hh.Infos.Style = hplot.HInfoSummary
+		// hh.Infos.Style = hplot.HInfoSummary
 
 		tbl.pl.X.Label.Text = tbl.name
 		tbl.pl.Add(hh)
 		tbl.pl.Add(hplot.NewGrid())
 	}
 
-	//tp.Plots[3] = nil
 	labeldata := []string{
-		fmt.Sprintf(`
+		fmt.Sprintf(`entries  = %v
 x-mean   = %v
 x-stddev = %v
 x-minmax = [%v; %v]
@@ -472,6 +471,7 @@ z-mean   = %v
 z-stddev = %v
 z-minmax = [%v; %v]
 `,
+			h1x.Entries(),
 			h1x.XMean(), h1x.XStdDev(), h1x.XMin(), h1x.XMax(),
 			h1y.XMean(), h1y.XStdDev(), h1y.XMin(), h1y.XMax(),
 			h1z.XMean(), h1z.XStdDev(), h1z.XMin(), h1z.XMax(),
