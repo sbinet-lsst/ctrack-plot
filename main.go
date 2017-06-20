@@ -489,6 +489,13 @@ z-minmax = [%v; %v]
 	if err != nil {
 		log.Fatal(err)
 	}
+	for i := range labels.TextStyle {
+		sty := &labels.TextStyle[i]
+		err := sty.Font.SetName("Courier")
+		if err != nil {
+			log.Fatal(err)
+		}
+	}
 	tp.Plot(1, 1).HideAxes()
 	tp.Plot(1, 1).X.Min = -0.5
 	tp.Plot(1, 1).X.Max = 1
